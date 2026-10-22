@@ -1,0 +1,35 @@
+{
+  "layers": {
+    "hourly_forecast": {
+      "fields": {
+        "OBJECTID": "esriFieldTypeOID",
+        "actual": "esriFieldTypeInteger",
+        "borough": "esriFieldTypeString",
+        "error": "esriFieldTypeDouble",
+        "hour_local": "esriFieldTypeInteger",
+        "predicted": "esriFieldTypeDouble",
+        "ts_utc": "esriFieldTypeDate",
+        "zone": "esriFieldTypeString",
+        "zone_id": "esriFieldTypeInteger"
+      },
+      "geometryType": "esriGeometryPoint",
+      "timeField": "ts_utc"
+    },
+    "zones": {
+      "fields": {
+        "OBJECTID": "esriFieldTypeOID",
+        "Shape__Area": "esriFieldTypeDouble",
+        "Shape__Length": "esriFieldTypeDouble",
+        "actual_total": "esriFieldTypeInteger",
+        "borough": "esriFieldTypeString",
+        "error_pct": "esriFieldTypeDouble",
+        "predicted_total": "esriFieldTypeDouble",
+        "zone": "esriFieldTypeString",
+        "zone_id": "esriFieldTypeInteger"
+      },
+      "geometryType": "esriGeometryPolygon",
+      "timeField": null
+    }
+  },
+  "service": "nyc_lyft_demand"
+}
