@@ -1,4 +1,5 @@
 """Shared test fixtures: fake ArcGIS objects, so tests never touch the network."""
+import json
 import time
 from types import SimpleNamespace
 
@@ -11,7 +12,8 @@ HOUR_MS = 3_600_000
 @pytest.fixture
 def make_layer():
     def _make(name="hourly_forecast", count=100, last_edit_ms=NOW_MS - HOUR_MS,
-              geometry="esriGeometryPoint", fields=None, time_field="ts_utc", fail=False):
+              geometry="esriGeometryPoint", fields=None, time_field="ts_utc",
+              fail=False, returned=None):
         props = {
             "name": name,
             "geometryType": geometry,
@@ -24,10 +26,17 @@ def make_layer():
             "editingInfo": {"lastEditDate": last_edit_ms} if last_edit_ms else None,
         }
 
-        def query(where="1=1", return_count_only=False):
+        def query(where="1=1", return_count_only=False, **kwargs):
             if fail:
                 raise RuntimeError("Service unavailable")
-            return count
+            if return_count_only:
+                return count
+            # `returned` lets a test simulate a query that silently loses features
+            n = count if returned is None else returned
+            fc = {"type": "FeatureCollection", "features": [
+                {"type": "Feature", "geometry": {"type": "Point", "coordinates": [-73.9, 40.7]},
+                 "properties": {"zone_id": i}} for i in range(n)]}
+            return SimpleNamespace(features=[None] * n, to_geojson=json.dumps(fc))
 
         return SimpleNamespace(properties=props, query=query)
     return _make

@@ -1,6 +1,9 @@
 """Command-line entry point: `arcgis-toolkit --help`."""
 from pathlib import Path
 from typing import Optional
+import shutil
+
+from . import backup as bk
 
 import typer
 from rich.console import Console
@@ -158,5 +161,49 @@ def validate(
 
     if any(i.severity == "error" for i in issues):
         raise typer.Exit(code=1)
+
+
+
+
+@app.command()
+def backup(
+    service: str = typer.Argument(..., help="Feature service title"),
+    out_dir: Path = typer.Option(Path("backups"), "--out", help="Folder for backups"),
+    keep: int = typer.Option(7, min=1, help="How many backups of this service to keep"),
+    portal: str = PortalOption,
+):
+    """Save every layer of a service as GeoJSON with a manifest, and prune old backups."""
+    try:
+        item = find_service(connect(portal), service)
+    except LookupError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=2)
+
+    folder = bk.backup_service(item, out_dir, datetime.now(timezone.utc))
+    manifest = bk.json.loads((folder / "manifest.json").read_text())
+
+    table = Table(title=f"Backup: {folder}")
+    for col in ("Layer", "Features", "Size (MB)", "SHA-256"):
+        table.add_column(col)
+    for e in manifest["layers"]:
+        table.add_row(e["layer"], f"{e['features']:,}", f"{e['bytes'] / 1e6:.2f}", e["sha256"][:12] + "…")
+    console.print(table)
+
+    for old in bk.backups_to_delete(list(out_dir.iterdir()), item.title, keep):
+        shutil.rmtree(old)
+        console.print(f"[dim]Removed old backup {old.name}[/dim]")
+
+
+@app.command("verify-backup")
+def verify_backup(folder: Path = typer.Argument(..., exists=True, file_okay=False,
+                                                help="Backup folder to check")):
+    """Check a backup's files against its manifest (presence, checksum, feature count)."""
+    problems = bk.verify(folder)
+    if problems:
+        for p in problems:
+            console.print(f"[red]✗ {p}[/red]")
+        raise typer.Exit(code=1)
+    console.print(f"[green]Backup {folder.name} is intact[/green]")
+    
 if __name__ == "__main__":
     app()
